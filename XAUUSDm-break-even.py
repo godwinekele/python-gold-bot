@@ -5,7 +5,7 @@ import smtplib
 from email.mime.text import MIMEText
 
 # ------------------ SETTINGS ------------------
-SYMBOL = "BTCUSDm"
+SYMBOL = "XAUUSDm"
 LOT = 0.01
 
 EMA_FAST = 5
