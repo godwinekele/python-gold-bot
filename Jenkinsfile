@@ -7,5 +7,13 @@ pipeline {
                 checkout scm
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("python-gold-bot:latest")
+                }
+            }
+        }
     }
 }
