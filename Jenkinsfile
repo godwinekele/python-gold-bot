@@ -10,7 +10,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t python-gold-bot:latest .'
+                sh 'docker build -t python-gold-bot:latest .'
             }
         }
     }
