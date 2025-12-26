@@ -1,65 +1,65 @@
 pipeline {
-    agent any
-
+    agent any 
+    
     environment {
-        DOCKERTAG = "${env.BUILD_NUMBER}"
+        APP_NAME = "python-gold-bot"
+        RELEASE = "1.0.0"
+        DOCKER_USER = "godwin-bot"
+        IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
+        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
     }
-
+    
     stages {
-        stage('Cleanup workspace') {
+        stage("Cleanup workspace") {
             steps {
                 cleanWs()
             }
         }
-
-        stage('Checkout from GitHub') {
+        
+        stage("Checkout from SCM") {
             steps {
-                git branch: 'main',
-                    credentialsId: 'github',
-                    url: 'https://github.com/godwinekele/update-manifest.git'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/godwinekele/python-gold-bot.git'
             }
         }
-
-        stage('Update Manifest Repo') {
+        
+        stage("Build Docker Image") {
             steps {
                 script {
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        withCredentials([
-                            usernamePassword(
-                                credentialsId: 'github',
-                                usernameVariable: 'GIT_USERNAME',
-                                passwordVariable: 'GIT_PASSWORD'
-                            )
-                        ]) {
-
-                            sh 'git config user.email "godwinekele@gmail.com"'
-                            sh 'git config user.name "Godwin Ekele"'
-
-                            sh 'cat deployment.yaml'
-
-                            sh '''
-                            sed -i "s+godwinekele/test-app:[^[:space:]]*+godwinekele/test-app:${DOCKERTAG}+g" deployment.yaml
-                            '''
-
-                            sh 'cat deployment.yaml'
-
-                            sh 'git add .'
-                            sh 'git commit -m "Updated image tag to ${DOCKERTAG} by Jenkins build ${BUILD_NUMBER}"'
-                            sh 'git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GIT_USERNAME}/update-manifest.git HEAD:main'
-                        }
+                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                    sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+                }
+            }
+        }
+        
+        stage("Push Docker Image") {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        sh "docker push ${IMAGE_NAME}:latest"
                     }
                 }
             }
         }
-    }
 
+        stage('Trigger ManifestUpdate') {
+            steps{
+                script{
+                    echo "triggering updatemanifestjob"
+                    build job: 'updatemanifest', parameters: [string(name: 'DOCKERTAG', value: env.IMAGE_TAG)]
+                }
+            }
+        }
+
+    }
+    
     post {
         success {
-            echo "Successfully updated manifest with image tag: ${DOCKERTAG}"
+            echo "Successfully built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
         }
         failure {
-            echo "Manifest update failed"
+            echo "Build or push failed!"
         }
     }
 }
-
