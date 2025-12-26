@@ -4,7 +4,7 @@ pipeline {
     environment {
         APP_NAME = "python-gold-bot"
         RELEASE = "1.0.0"
-        DOCKER_USER = "godwin-bot"
+        DOCKER_USER = "godwinekele"
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
     }
@@ -18,7 +18,7 @@ pipeline {
         
         stage("Checkout from SCM") {
             steps {
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/godwinekele/python-gold-bot.git'
+                git branch: 'main', credentialsId: 'github-cred', url: 'https://github.com/godwinekele/python-gold-bot.git'
             }
         }
         
@@ -34,20 +34,11 @@ pipeline {
         stage("Push Docker Image") {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                         sh 'echo $PASS | docker login -u $USER --password-stdin'
                         sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                         sh "docker push ${IMAGE_NAME}:latest"
                     }
-                }
-            }
-        }
-
-        stage('Trigger ManifestUpdate') {
-            steps{
-                script{
-                    echo "triggering updatemanifestjob"
-                    build job: 'updatemanifest', parameters: [string(name: 'DOCKERTAG', value: env.IMAGE_TAG)]
                 }
             }
         }
