@@ -2,7 +2,7 @@ pipeline {
     agent any 
     
     environment {
-        APP_NAME = "python-gold-bot"
+        APP_NAME = "Godwin's bot"
         RELEASE = "1.0.0"
         DOCKER_USER = "godwinekele"
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
